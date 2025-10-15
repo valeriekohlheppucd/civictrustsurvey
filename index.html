@@ -28,7 +28,7 @@
 </head>
 <body>
   <h2>Values Survey: Freedom, Equality, and Security</h2>
-  <p>Please click on each ternary plot to show how you think society values these today (2025) and in 2075.</p>
+  <p>Please click inside each triangle to indicate how society currently values these three ideas (today, and in 2075).</p>
 
   <div id="plots">
     <div id="today" class="plot"></div>
@@ -39,50 +39,58 @@
   <p id="status"></p>
 
   <script>
-    // --------------------------
-    // SETTINGS
-    // --------------------------
-    // 👇 Paste your Google Apps Script Web App URL between the quotes:
+    // 👇 Paste your Google Apps Script Web App URL below
     const scriptURL = "https://script.google.com/macros/s/AKfycby1OGbTobn7E8S0o3h2HKZDScqLg4unPouTbA4dZ9CtVKCtrh_oh7LYa_ACLESvTXf_/exec";
 
-    // --------------------------
-    // Create Ternary Plots
-    // --------------------------
     const labels = ['Freedom', 'Equality', 'Security'];
     let todayPoint = null;
     let futurePoint = null;
 
     function makePlot(divId, title) {
-      Plotly.newPlot(divId, [{
+      const plotData = [{
         type: 'scatterternary',
         mode: 'markers',
-        a: [], b: [], c: [],
+        a: [],
+        b: [],
+        c: [],
         marker: { size: 10, color: 'blue' }
-      }], {
+      }];
+
+      const layout = {
         ternary: {
           sum: 1,
           aaxis: { title: labels[0], min: 0.01 },
           baxis: { title: labels[1], min: 0.01 },
           caxis: { title: labels[2], min: 0.01 }
         },
-        title: title
-      });
+        title: title,
+        height: 400,
+        width: 400
+      };
+
+      Plotly.newPlot(divId, plotData, layout);
 
       const plotDiv = document.getElementById(divId);
-      plotDiv.on('plotly_click', data => {
-        const { a, b, c } = data.points[0];
+      plotDiv.addEventListener('click', (event) => {
+        const gd = plotDiv._fullLayout.ternary._subplot;
+        const bbox = plotDiv.getBoundingClientRect();
+        const x = event.clientX - bbox.left;
+        const y = event.clientY - bbox.top;
+        const ternary = gd.pixelToTernary(x, y);
+
+        if (!ternary) return; // Ignore clicks outside the triangle
+
+        const { a, b, c } = ternary;
         if (divId === 'today') todayPoint = { a, b, c };
         else futurePoint = { a, b, c };
-        Plotly.update(divId, { a: [a], b: [b], c: [c] });
+
+        Plotly.update(divId, { a: [a], b: [b], c: [c] }, {}, [0]);
       });
     }
 
     makePlot('today', 'Today (2025)');
     makePlot('future', 'Year 2075');
 
-    // --------------------------
-    // Submit Data Function
-    // --------------------------
     function submitData() {
       if (!todayPoint || !futurePoint) {
         document.getElementById("status").innerText = "⚠️ Please select points on both plots first.";
