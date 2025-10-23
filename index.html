@@ -1,136 +1,132 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <title>Freedom • Equality • Security Survey</title>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <style>
-    body { font-family: system-ui, Arial; max-width: 900px; margin: 30px auto; padding: 0 16px; }
-    h1, h2 { text-align: center; }
-    .block { margin-bottom: 40px; }
-    .sliders { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-    label { font-weight: 500; }
-    input[type=range] { width: 100%; }
-    .controls { text-align: center; }
-    button { padding: 10px 18px; font-size: 16px; }
-    #status { margin-top: 10px; color: #555; font-size: 14px; text-align: center; }
-  </style>
+<meta charset="UTF-8">
+<title>Freedom — Equality — Security Survey</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+body { font-family: system-ui, Arial; max-width:900px; margin:20px auto; padding:0 16px; }
+h1, h2 { text-align:center; }
+.sliders { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+label { font-weight:600; }
+input[type=range]{ width:100%; }
+button{ padding:10px 18px; font-size:16px; margin-top:12px; }
+#status{ text-align:center; margin-top:10px; color:#444; }
+</style>
 </head>
 <body>
-  <h1>Freedom — Equality — Security Survey</h1>
-  <p style="text-align:center;">Adjust your priorities for <b>Today</b> and <b>Year 2075</b>.  
-  Click in each plot or move the sliders. Submit activates after both are set.</p>
+<h1>Freedom — Equality — Security Survey</h1>
+<p style="text-align:center;">Adjust sliders or click the plots to set your priorities for <b>Today</b> and <b>Year 2075</b>. Both must be set before you can submit.</p>
 
-  <div class="block">
-    <h2>Values — Today</h2>
-    <div id="plot-today" style="height:360px;"></div>
-    <div class="sliders" id="sliders-today"></div>
+<div>
+  <h2>Today</h2>
+  <div id="plot-today" style="height:360px;"></div>
+  <div class="sliders">
+    <label>Freedom: <span id="today-f-val">33</span></label><input id="today-f" type="range" min="0" max="100" value="33">
+    <label>Equality: <span id="today-e-val">33</span></label><input id="today-e" type="range" min="0" max="100" value="33">
+    <label>Security: <span id="today-s-val">34</span></label><input id="today-s" type="range" min="0" max="100" value="34">
   </div>
+</div>
 
-  <hr>
+<hr>
 
-  <div class="block">
-    <h2>Values — 2075</h2>
-    <div id="plot-future" style="height:360px;"></div>
-    <div class="sliders" id="sliders-future"></div>
+<div>
+  <h2>2075</h2>
+  <div id="plot-future" style="height:360px;"></div>
+  <div class="sliders">
+    <label>Freedom: <span id="future-f-val">33</span></label><input id="future-f" type="range" min="0" max="100" value="33">
+    <label>Equality: <span id="future-e-val">33</span></label><input id="future-e" type="range" min="0" max="100" value="33">
+    <label>Security: <span id="future-s-val">34</span></label><input id="future-s" type="range" min="0" max="100" value="34">
   </div>
+</div>
 
-  <div class="controls">
-    <button id="submitBtn" disabled>Submit Responses</button>
-    <div id="status"></div>
-  </div>
+<div style="text-align:center;">
+  <button id="submitBtn" disabled>Submit Responses</button>
+  <div id="status"></div>
+</div>
 
 <script>
-const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyPlr5QcD64KhAfB0MohuDNI2mnnFWZZ3sdUoEggfR8PnywduAo3WLiQCQtVM2NeA8-/exec";
+const ENDPOINT_URL = "YOUR_APPS_SCRIPT_URL_HERE"; // 👈 REPLACE THIS
 
-// ---------- helpers ----------
-function makeSliders(prefix) {
-  const div = document.getElementById('sliders-' + prefix);
-  ['freedom','equality','security'].forEach((v,i)=>{
-    const label = document.createElement('label');
-    label.innerHTML = v.charAt(0).toUpperCase() + v.slice(1) + 
-                      ': <span id="'+prefix+'-'+v+'-val">33</span>';
-    const slider = document.createElement('input');
-    slider.type = 'range'; slider.min = 0; slider.max = 100; slider.value = 33;
-    slider.id = prefix + '-' + v;
-    div.appendChild(label); div.appendChild(slider);
-  });
+function norm(f,e,s){ const sum=f+e+s||1; return [f/sum, e/sum, s/sum]; }
+
+function plotInit(div,color){
+  Plotly.newPlot(div,[{
+    type:'scatterternary',mode:'markers',
+    a:[0.33], b:[0.33], c:[0.34],
+    marker:{size:12,color:color}
+  }],{
+    ternary:{ sum:1,
+      aaxis:{title:'Freedom'},
+      baxis:{title:'Equality'},
+      caxis:{title:'Security'}
+    },
+    margin:{t:40,l:10,r:10,b:10}
+  },{displayModeBar:false});
 }
-makeSliders('today'); makeSliders('future');
+plotInit('plot-today','#1f77b4');
+plotInit('plot-future','#d62728');
 
-function normalize(f,e,s){const t=f+e+s||1;return [f/t,e/t,s/t];}
-function roundPct(x){return Math.round(x*100);}
-
-function initPlot(divId, color){
-  const trace = {type:'scatterternary',mode:'markers',a:[0.33],b:[0.33],c:[0.34],
-                 marker:{size:14,color:color}};
-  const layout={ternary:{sum:1,aaxis:{title:'Freedom'},baxis:{title:'Equality'},caxis:{title:'Security'}},
-                margin:{t:40,l:20,r:20,b:20}};
-  Plotly.newPlot(divId,[trace],layout,{displayModeBar:false});
-}
-initPlot('plot-today','#1f77b4');
-initPlot('plot-future','#d62728');
-
-const interacted={today:false,future:false};
+const interacted = { today:false, future:false };
 function checkSubmit(){
   document.getElementById('submitBtn').disabled = !(interacted.today && interacted.future);
 }
 
-// ---------- sliders -> plot ----------
-function updateFromSliders(prefix, plotId){
-  const f=+document.getElementById(prefix+'-freedom').value;
-  const e=+document.getElementById(prefix+'-equality').value;
-  const s=+document.getElementById(prefix+'-security').value;
-  const [nf,ne,ns]=normalize(f,e,s);
-  document.getElementById(prefix+'-freedom-val').textContent=roundPct(nf);
-  document.getElementById(prefix+'-equality-val').textContent=roundPct(ne);
-  document.getElementById(prefix+'-security-val').textContent=100-(roundPct(nf)+roundPct(ne));
-  Plotly.restyle(plotId,{a:[[nf]],b:[[ne]],c:[[ns]]},[0]);
+function update(prefix){
+  const f=+document.getElementById(prefix+'-f').value;
+  const e=+document.getElementById(prefix+'-e').value;
+  const s=+document.getElementById(prefix+'-s').value;
+  const [nf,ne,ns]=norm(f,e,s);
+  document.getElementById(prefix+'-f-val').textContent=Math.round(nf*100);
+  document.getElementById(prefix+'-e-val').textContent=Math.round(ne*100);
+  document.getElementById(prefix+'-s-val').textContent=100-(Math.round(nf*100)+Math.round(ne*100));
+  Plotly.restyle('plot-'+(prefix==='today'?'today':'future'),
+    {'a':[[nf]],'b':[[ne]],'c':[[ns]]});
   interacted[prefix]=true;
   checkSubmit();
 }
 
+// slider listeners
 ['today','future'].forEach(p=>{
-  ['freedom','equality','security'].forEach(v=>{
-    document.getElementById(p+'-'+v).addEventListener('input',()=>updateFromSliders(p,'plot-'+p));
+  ['f','e','s'].forEach(v=>{
+    document.getElementById(p+'-'+v).addEventListener('input',()=>update(p));
   });
-  updateFromSliders(p,'plot-'+p);
+  update(p);
 });
 
-// ---------- plot -> sliders ----------
-document.getElementById('plot-today').on('plotly_click',e=>{
-  const p=e.points[0]; if(!p) return;
-  document.getElementById('today-freedom').value=Math.round(p.a*100);
-  document.getElementById('today-equality').value=Math.round(p.b*100);
-  document.getElementById('today-security').value=Math.round(p.c*100);
-  updateFromSliders('today','plot-today');
-});
-document.getElementById('plot-future').on('plotly_click',e=>{
-  const p=e.points[0]; if(!p) return;
-  document.getElementById('future-freedom').value=Math.round(p.a*100);
-  document.getElementById('future-equality').value=Math.round(p.b*100);
-  document.getElementById('future-security').value=Math.round(p.c*100);
-  updateFromSliders('future','plot-future');
-});
+// click to update sliders
+function clickHandler(prefix){
+  const plot=document.getElementById('plot-'+(prefix==='today'?'today':'future'));
+  plot.on('plotly_click',ev=>{
+    const pt=ev.points[0]; if(!pt)return;
+    document.getElementById(prefix+'-f').value=Math.round(pt.a*100);
+    document.getElementById(prefix+'-e').value=Math.round(pt.b*100);
+    document.getElementById(prefix+'-s').value=Math.round(pt.c*100);
+    update(prefix);
+  });
+}
+clickHandler('today'); clickHandler('future');
 
-// ---------- submit ----------
-document.getElementById('submitBtn').addEventListener('click',async()=>{
+document.getElementById('submitBtn').addEventListener('click', async ()=>{
   document.getElementById('status').textContent='Submitting...';
-  const collect=p=>{
-    const f=+document.getElementById(p+'-freedom').value;
-    const e=+document.getElementById(p+'-equality').value;
-    const s=+document.getElementById(p+'-security').value;
-    const [nf,ne,ns]=normalize(f,e,s);
-    return {timepoint:p==='today'?'today':'2075',freedom:nf,equality:ne,security:ns};
-  };
-  const payload=[collect('today'),collect('future')];
+  const today=norm(+today_f.value,+today_e.value,+today_s.value);
+  const future=norm(+future_f.value,+future_e.value,+future_s.value);
+  const payload=[
+    {timepoint:'today', freedom:today[0], equality:today[1], security:today[2]},
+    {timepoint:'2075', freedom:future[0], equality:future[1], security:future[2]}
+  ];
   try{
-    const res=await fetch(ENDPOINT_URL,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    if(!res.ok) throw new Error(await res.text());
+    const r=await fetch(https://script.google.com/macros/s/AKfycbyYsyQ-Tl0T1mFCWjujmHeAiDyH2Jpdgm3wHlY1_dgnIY39SHgusJ9676ds3mlGxkys/exec,{
+      method:'POST',mode:'cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const txt=await r.text();
+    if(!r.ok || !txt.includes('OK')) throw new Error(txt);
     document.getElementById('status').textContent='✅ Submitted!';
     document.getElementById('submitBtn').disabled=true;
   }catch(err){
-    document.getElementById('status').textContent='Error: '+err.message;
+    document.getElementById('status').textContent='❌ Submission failed: '+err.message;
     checkSubmit();
   }
 });
