@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Freedom–Equality–Security Values Survey</title>
+  <title>Freedom–Equality–Security Survey</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
     body { font-family:Arial, sans-serif; max-width:900px; margin:20px auto; }
@@ -17,8 +17,10 @@
 <body>
 
 <h1>Freedom – Equality – Security Survey</h1>
-<p>Please allocate importance (summing to 100%) among <b>Freedom</b>, <b>Equality</b>, and <b>Security</b> for today and for the year 2075.</p>
+<p>Allocate importance (must sum to 100%) among <b>Freedom</b>, <b>Equality</b>, and <b>Security</b> for both <b>Today</b> and the <b>Year 2075</b>.</p>
 
+<!-- TODAY -->
+<h2>Values Today</h2>
 <div id="plot-today" class="plot-container"></div>
 <div class="sliders" id="sliders-today">
   <label>Freedom: <span id="today-freedom-val">33</span></label>
@@ -31,6 +33,8 @@
 
 <hr>
 
+<!-- 2075 -->
+<h2>Values in 2075</h2>
 <div id="plot-2075" class="plot-container"></div>
 <div class="sliders" id="sliders-2075">
   <label>Freedom: <span id="f2075-val">33</span></label>
@@ -47,54 +51,63 @@
 </div>
 
 <script>
-// ---- Utility: Normalize and update values ----
+// Utility function to normalize and keep total = 1
 function normalizeValues(f, e, s) {
   const t = f+e+s || 1;
   return [f/t, e/t, s/t];
 }
 
-// ---- Initialize Plotly ternary plots ----
-function makePlot(divId, label, color) {
+// Initialize a ternary plot
+function makePlot(divId, title, color) {
   const data = [{
     type: 'scatterternary',
     mode: 'markers',
     a: [0.33],
     b: [0.33],
     c: [0.34],
-    marker: {size: 12, color: color},
+    marker: { size: 12, color: color },
     name: 'Selection'
   }];
   const layout = {
     ternary: {
       sum: 1,
-      aaxis: {title: 'Freedom'},
-      baxis: {title: 'Equality'},
-      caxis: {title: 'Security'}
+      aaxis: { title: 'Freedom' },
+      baxis: { title: 'Equality' },
+      caxis: { title: 'Security' }
     },
-    title: label,
-    margin: {t:60}
+    title: title,
+    margin: { t: 60 }
   };
-  Plotly.newPlot(divId, data, layout, {displayModeBar:false});
+  Plotly.newPlot(divId, data, layout, { displayModeBar: false });
 }
 
 // Create both plots
-makePlot('plot-today','Values Today','#1f77b4');
-makePlot('plot-2075','Values in 2075','#d62728');
+makePlot('plot-today', 'Values Today', '#1f77b4');
+makePlot('plot-2075', 'Values in 2075', '#d62728');
 
-// ---- Sync sliders and plot ----
+// Track user interactions
+let userInteracted = { today: false, '2075': false };
+
+// Update a plot from sliders
 function updatePlotFromSliders(prefix, plotId) {
   const f = +document.getElementById(prefix+'-freedom').value;
   const e = +document.getElementById(prefix+'-equality').value;
   const s = +document.getElementById(prefix+'-security').value;
   const [nf, ne, ns] = normalizeValues(f, e, s);
+
+  // Update text display
   document.getElementById(prefix+'-freedom-val').textContent = Math.round(nf*100);
   document.getElementById(prefix+'-equality-val').textContent = Math.round(ne*100);
   document.getElementById(prefix+'-security-val').textContent = Math.round(ns*100);
-  Plotly.update(plotId, {a:[nf], b:[ne], c:[ns]}, {}, [0]);
+
+  // Update the plot marker
+  Plotly.restyle(plotId, { a: [[nf]], b: [[ne]], c: [[ns]] }, [0]);
+
   userInteracted[prefix] = true;
   checkReady();
 }
 
+// Hook up sliders
 ['today','2075'].forEach(tp=>{
   ['freedom','equality','security'].forEach(v=>{
     document.getElementById(tp+'-'+v).addEventListener('input',()=>updatePlotFromSliders(tp,'plot-'+tp));
@@ -102,31 +115,28 @@ function updatePlotFromSliders(prefix, plotId) {
   updatePlotFromSliders(tp,'plot-'+tp);
 });
 
-// ---- Click on plot to update sliders ----
+// Click on plot updates sliders
 function handleClick(event, prefix, plotId) {
-  const ternary = event.points?.[0];
-  if (!ternary) return;
-  const nf = ternary.a, ne = ternary.b, ns = ternary.c;
+  const pt = event.points?.[0];
+  if (!pt) return;
+  const nf = pt.a, ne = pt.b, ns = pt.c;
   document.getElementById(prefix+'-freedom').value = Math.round(nf*100);
   document.getElementById(prefix+'-equality').value = Math.round(ne*100);
   document.getElementById(prefix+'-security').value = Math.round(ns*100);
   updatePlotFromSliders(prefix, plotId);
 }
 
-document.getElementById('plot-today')
-  .on('plotly_click', ev => handleClick(ev, 'today','plot-today'));
-document.getElementById('plot-2075')
-  .on('plotly_click', ev => handleClick(ev, '2075','plot-2075'));
+document.getElementById('plot-today').on('plotly_click', ev => handleClick(ev, 'today', 'plot-today'));
+document.getElementById('plot-2075').on('plotly_click', ev => handleClick(ev, '2075', 'plot-2075'));
 
-// ---- Submission handling ----
-let userInteracted = {today:false, '2075':false};
+// Enable submit only after both plots interacted
 function checkReady() {
   if (userInteracted.today && userInteracted['2075'])
     document.getElementById('submitBtn').disabled = false;
 }
 
-// Example endpoint — replace with your real submission logic
-const endpoint = "https://script.google.com/macros/s/AKfycbxOWFxFz8T-srTnTK6bjDw3lEIIMla323dFIsjn7YhBQONWBVuw1JCi4PW9PSED07ik/exec";
+// --- SUBMIT FUNCTION ---
+const endpoint = "https://script.google.com/macros/s/AKfycby-oWxhcSRpXkwffrnC_vvTXy7AYJRp1962j5HfEb9Pj_Ubz6FbLx-9-vZNGwhu1oPi/exec"; // Replace with your real Apps Script URL
 
 document.getElementById('submitBtn').onclick = async ()=>{
   const getVals = (p)=> {
@@ -136,11 +146,9 @@ document.getElementById('submitBtn').onclick = async ()=>{
     const [nf,ne,ns]=normalizeValues(f,e,s);
     return {timepoint:p, freedom:nf, equality:ne, security:ns};
   };
-  const bodyToday = getVals('today');
-  const body2075 = getVals('2075');
+  const responses = [getVals('today'), getVals('2075')];
   try {
-    await fetch(endpoint,{method:'POST',body:JSON.stringify(bodyToday)});
-    await fetch(endpoint,{method:'POST',body:JSON.stringify(body2075)});
+    await fetch(endpoint,{method:'POST',body:JSON.stringify(responses)});
     status.textContent="✅ Responses submitted successfully. Thank you!";
     submitBtn.disabled=true;
   } catch(e){
