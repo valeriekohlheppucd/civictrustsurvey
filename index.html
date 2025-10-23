@@ -46,7 +46,7 @@ button{ padding:10px 18px; font-size:16px; margin-top:12px; }
 </div>
 
 <script>
-const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbwXz7NFWbLa2tTYr4lhNl3gatsmrG-ZONT2NlyE7iHDGbQxSnuLwoN6XojGVpsV45fd/exec"; // 👈 REPLACE THIS
+const ENDPOINT_URL = "YOUR_APPS_SCRIPT_URL_HERE"; // 👈 REPLACE THIS
 
 function norm(f,e,s){ const sum=f+e+s||1; return [f/sum, e/sum, s/sum]; }
 
@@ -116,7 +116,7 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
     {timepoint:'2075', freedom:future[0], equality:future[1], security:future[2]}
   ];
   try{
-    const r=await fetch(https://script.google.com/macros/s/AKfycbyYsyQ-Tl0T1mFCWjujmHeAiDyH2Jpdgm3wHlY1_dgnIY39SHgusJ9676ds3mlGxkys/exec,{
+    const r=await fetch(https://script.google.com/macros/s/AKfycbwXz7NFWbLa2tTYr4lhNl3gatsmrG-ZONT2NlyE7iHDGbQxSnuLwoN6XojGVpsV45fd/exec,{
       method:'POST',mode:'cors',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(payload)
