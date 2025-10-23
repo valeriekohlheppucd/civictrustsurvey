@@ -2,203 +2,138 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Freedom • Equality • Security — Survey</title>
+  <title>Freedom • Equality • Security Survey</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    body { font-family: system-ui, Arial; max-width:900px; margin:20px auto; padding:0 12px; }
-    h1 { text-align:center; }
-    .block { margin:18px 0; }
-    .sliders { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
-    input[type=range]{ width:100%; }
-    .controls { text-align:center; margin-top:16px; }
-    button{ padding:10px 18px; font-size:16px; }
-    .info { color:#666; font-size:14px; text-align:center; margin-top:8px; }
+    body { font-family: system-ui, Arial; max-width: 900px; margin: 30px auto; padding: 0 16px; }
+    h1, h2 { text-align: center; }
+    .block { margin-bottom: 40px; }
+    .sliders { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+    label { font-weight: 500; }
+    input[type=range] { width: 100%; }
+    .controls { text-align: center; }
+    button { padding: 10px 18px; font-size: 16px; }
+    #status { margin-top: 10px; color: #555; font-size: 14px; text-align: center; }
   </style>
 </head>
 <body>
-  <h1>Freedom — Equality — Security</h1>
-  <p class="info">Allocate 100 points across the three values for <strong>Today</strong> and for <strong>Year 2075</strong>. You can click on a plot or use the sliders. Submit becomes active after you set both timepoints.</p>
+  <h1>Freedom — Equality — Security Survey</h1>
+  <p style="text-align:center;">Adjust your priorities for <b>Today</b> and <b>Year 2075</b>.  
+  Click in each plot or move the sliders. Submit activates after both are set.</p>
 
-  <!-- TODAY -->
   <div class="block">
     <h2>Values — Today</h2>
-    <div id="plot-today" style="width:100%;height:360px;"></div>
-    <div class="sliders" id="sliders-today">
-      <label>Freedom: <span id="today-freedom-val">33</span></label>
-      <input id="today-freedom" type="range" min="0" max="100" value="33">
-      <label>Equality: <span id="today-equality-val">33</span></label>
-      <input id="today-equality" type="range" min="0" max="100" value="33">
-      <label>Security: <span id="today-security-val">34</span></label>
-      <input id="today-security" type="range" min="0" max="100" value="34">
-    </div>
+    <div id="plot-today" style="height:360px;"></div>
+    <div class="sliders" id="sliders-today"></div>
   </div>
 
   <hr>
 
-  <!-- FUTURE -->
   <div class="block">
-    <h2>Values — Year 2075</h2>
-    <div id="plot-future" style="width:100%;height:360px;"></div>
-    <div class="sliders" id="sliders-future">
-      <label>Freedom: <span id="future-freedom-val">33</span></label>
-      <input id="future-freedom" type="range" min="0" max="100" value="33">
-      <label>Equality: <span id="future-equality-val">33</span></label>
-      <input id="future-equality" type="range" min="0" max="100" value="33">
-      <label>Security: <span id="future-security-val">34</span></label>
-      <input id="future-security" type="range" min="0" max="100" value="34">
-    </div>
+    <h2>Values — 2075</h2>
+    <div id="plot-future" style="height:360px;"></div>
+    <div class="sliders" id="sliders-future"></div>
   </div>
 
   <div class="controls">
-    <button id="submitBtn" disabled>Submit responses</button>
-    <div id="status" class="info"></div>
+    <button id="submitBtn" disabled>Submit Responses</button>
+    <div id="status"></div>
   </div>
 
 <script>
-  // ---- CONFIG: set your server/Apps Script endpoint here ----
-  const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyPlr5QcD64KhAfB0MohuDNI2mnnFWZZ3sdUoEggfR8PnywduAo3WLiQCQtVM2NeA8-/exec"; // e.g. https://script.google.com/macros/s/XXXX/exec
+const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyPlr5QcD64KhAfB0MohuDNI2mnnFWZZ3sdUoEggfR8PnywduAo3WLiQCQtVM2NeA8-/exec";
 
-  // ---- Helpers ----
-  function normalize(f,e,s) {
-    const t = (f + e + s) || 1;
-    return [f/t, e/t, s/t];
-  }
-  function roundPct(x){ return Math.round(x*100); }
-
-  // ---- Plot initialization ----
-  function initTernary(divId, title, color) {
-    const trace = {
-      type: 'scatterternary',
-      mode: 'markers',
-      a: [0.33], // Freedom
-      b: [0.33], // Equality
-      c: [0.34], // Security
-      marker: { size: 14, color: color }
-    };
-    const layout = {
-      title: title,
-      ternary: {
-        sum: 1,
-        aaxis: { title: 'Freedom' },
-        baxis: { title: 'Equality' },
-        caxis: { title: 'Security' }
-      },
-      margin: { t: 50, l: 20, r: 20, b: 20 }
-    };
-    Plotly.newPlot(divId, [trace], layout, {displayModeBar:false});
-  }
-
-  initTernary('plot-today', 'Today', '#1f77b4');
-  initTernary('plot-future', 'Year 2075', '#d62728');
-
-  // ---- State to track whether user interacted with each plot ----
-  const userInteracted = { today: false, future: false };
-  function checkEnableSubmit(){
-    const ok = userInteracted.today && userInteracted.future;
-    document.getElementById('submitBtn').disabled = !ok;
-  }
-
-  // ---- Update functions (sliders -> plot) ----
-  function updateFromSliders(prefix, plotId) {
-    const f = +document.getElementById(prefix + '-freedom').value;
-    const e = +document.getElementById(prefix + '-equality').value;
-    const s = +document.getElementById(prefix + '-security').value;
-    const [nf,ne,ns] = normalize(f,e,s);
-
-    // update displayed percentages (rounded)
-    document.getElementById(prefix + '-freedom-val').textContent = roundPct(nf);
-    document.getElementById(prefix + '-equality-val').textContent = roundPct(ne);
-    // ensure the three rounded numbers sum to 100 visually by calculating last as remainder
-    document.getElementById(prefix + '-security-val').textContent =
-      100 - (roundPct(nf) + roundPct(ne)) ;
-
-    // Plotly.restyle expects arrays for a,b,c values per trace
-    Plotly.restyle(plotId, { 'a': [[nf]], 'b': [[ne]], 'c': [[ns]] }, [0]);
-
-    userInteracted[prefix] = true;
-    checkEnableSubmit();
-  }
-
-  // wire sliders both blocks
-  function wireSliders(prefix, plotId) {
-    ['freedom','equality','security'].forEach(sl=>{
-      const el = document.getElementById(prefix + '-' + sl);
-      el.addEventListener('input', ()=> updateFromSliders(prefix, plotId));
-    });
-    // initial sync
-    updateFromSliders(prefix, plotId);
-  }
-
-  wireSliders('today', 'plot-today');
-  wireSliders('future', 'plot-future');
-
-  // ---- Click on plot -> update sliders (plot -> sliders) ----
-  const plotToday = document.getElementById('plot-today');
-  const plotFuture = document.getElementById('plot-future');
-
-  plotToday.on('plotly_click', function(ev){
-    const pt = ev.points && ev.points[0];
-    if(!pt) return;
-    // pt.a, pt.b, pt.c are normalized fractions
-    document.getElementById('today-freedom').value = Math.round(pt.a*100);
-    document.getElementById('today-equality').value = Math.round(pt.b*100);
-    document.getElementById('today-security').value = Math.round(pt.c*100);
-    updateFromSliders('today','plot-today');
+// ---------- helpers ----------
+function makeSliders(prefix) {
+  const div = document.getElementById('sliders-' + prefix);
+  ['freedom','equality','security'].forEach((v,i)=>{
+    const label = document.createElement('label');
+    label.innerHTML = v.charAt(0).toUpperCase() + v.slice(1) + 
+                      ': <span id="'+prefix+'-'+v+'-val">33</span>';
+    const slider = document.createElement('input');
+    slider.type = 'range'; slider.min = 0; slider.max = 100; slider.value = 33;
+    slider.id = prefix + '-' + v;
+    div.appendChild(label); div.appendChild(slider);
   });
+}
+makeSliders('today'); makeSliders('future');
 
-  plotFuture.on('plotly_click', function(ev){
-    const pt = ev.points && ev.points[0];
-    if(!pt) return;
-    document.getElementById('future-freedom').value = Math.round(pt.a*100);
-    document.getElementById('future-equality').value = Math.round(pt.b*100);
-    document.getElementById('future-security').value = Math.round(pt.c*100);
-    updateFromSliders('future','plot-future');
+function normalize(f,e,s){const t=f+e+s||1;return [f/t,e/t,s/t];}
+function roundPct(x){return Math.round(x*100);}
+
+function initPlot(divId, color){
+  const trace = {type:'scatterternary',mode:'markers',a:[0.33],b:[0.33],c:[0.34],
+                 marker:{size:14,color:color}};
+  const layout={ternary:{sum:1,aaxis:{title:'Freedom'},baxis:{title:'Equality'},caxis:{title:'Security'}},
+                margin:{t:40,l:20,r:20,b:20}};
+  Plotly.newPlot(divId,[trace],layout,{displayModeBar:false});
+}
+initPlot('plot-today','#1f77b4');
+initPlot('plot-future','#d62728');
+
+const interacted={today:false,future:false};
+function checkSubmit(){
+  document.getElementById('submitBtn').disabled = !(interacted.today && interacted.future);
+}
+
+// ---------- sliders -> plot ----------
+function updateFromSliders(prefix, plotId){
+  const f=+document.getElementById(prefix+'-freedom').value;
+  const e=+document.getElementById(prefix+'-equality').value;
+  const s=+document.getElementById(prefix+'-security').value;
+  const [nf,ne,ns]=normalize(f,e,s);
+  document.getElementById(prefix+'-freedom-val').textContent=roundPct(nf);
+  document.getElementById(prefix+'-equality-val').textContent=roundPct(ne);
+  document.getElementById(prefix+'-security-val').textContent=100-(roundPct(nf)+roundPct(ne));
+  Plotly.restyle(plotId,{a:[[nf]],b:[[ne]],c:[[ns]]},[0]);
+  interacted[prefix]=true;
+  checkSubmit();
+}
+
+['today','future'].forEach(p=>{
+  ['freedom','equality','security'].forEach(v=>{
+    document.getElementById(p+'-'+v).addEventListener('input',()=>updateFromSliders(p,'plot-'+p));
   });
+  updateFromSliders(p,'plot-'+p);
+});
 
-  // ---- Submit handler (sends both responses as one array) ----
-  document.getElementById('submitBtn').addEventListener('click', async ()=>{
-    document.getElementById('status').textContent = 'Submitting...';
-    document.getElementById('submitBtn').disabled = true;
+// ---------- plot -> sliders ----------
+document.getElementById('plot-today').on('plotly_click',e=>{
+  const p=e.points[0]; if(!p) return;
+  document.getElementById('today-freedom').value=Math.round(p.a*100);
+  document.getElementById('today-equality').value=Math.round(p.b*100);
+  document.getElementById('today-security').value=Math.round(p.c*100);
+  updateFromSliders('today','plot-today');
+});
+document.getElementById('plot-future').on('plotly_click',e=>{
+  const p=e.points[0]; if(!p) return;
+  document.getElementById('future-freedom').value=Math.round(p.a*100);
+  document.getElementById('future-equality').value=Math.round(p.b*100);
+  document.getElementById('future-security').value=Math.round(p.c*100);
+  updateFromSliders('future','plot-future');
+});
 
-    function collect(prefix){
-      const f = +document.getElementById(prefix + '-freedom').value;
-      const e = +document.getElementById(prefix + '-equality').value;
-      const s = +document.getElementById(prefix + '-security').value;
-      const [nf,ne,ns] = normalize(f,e,s);
-      return { timepoint: prefix === 'today' ? 'today' : '2075',
-               freedom: nf, equality: ne, security: ns };
-    }
-
-    const payload = [ collect('today'), collect('future') ];
-    try {
-      // If using Apps Script, your doPost should accept an array of objects.
-      const resp = await fetch(ENDPOINT_URL, {
-        method: 'POST',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error(text || ('Status ' + resp.status));
-      }
-      document.getElementById('status').textContent = '✅ Submitted! Thank you.';
-      // set local marker so user can't re-submit accidentally
-      localStorage.setItem('fes_submitted', '1');
-    } catch (err) {
-      document.getElementById('status').textContent = 'Submission failed: ' + err.message;
-      // re-enable submit so user can retry
-      document.getElementById('submitBtn').disabled = false;
-    }
-  });
-
-  // ---- Prevent resubmits if localStorage flag present ----
-  if (localStorage.getItem('fes_submitted')) {
-    document.getElementById('status').textContent = "You already submitted this survey from this browser.";
-    document.getElementById('submitBtn').disabled = true;
+// ---------- submit ----------
+document.getElementById('submitBtn').addEventListener('click',async()=>{
+  document.getElementById('status').textContent='Submitting...';
+  const collect=p=>{
+    const f=+document.getElementById(p+'-freedom').value;
+    const e=+document.getElementById(p+'-equality').value;
+    const s=+document.getElementById(p+'-security').value;
+    const [nf,ne,ns]=normalize(f,e,s);
+    return {timepoint:p==='today'?'today':'2075',freedom:nf,equality:ne,security:ns};
+  };
+  const payload=[collect('today'),collect('future')];
+  try{
+    const res=await fetch(ENDPOINT_URL,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!res.ok) throw new Error(await res.text());
+    document.getElementById('status').textContent='✅ Submitted!';
+    document.getElementById('submitBtn').disabled=true;
+  }catch(err){
+    document.getElementById('status').textContent='Error: '+err.message;
+    checkSubmit();
   }
-
-  // ---- End of script ----
+});
 </script>
 </body>
 </html>
