@@ -2,49 +2,152 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Freedom–Equality–Security Survey</title>
+  <title>Freedom–Equality–Security Values Survey</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    body { font-family:sans-serif; max-width:700px; margin:20px auto; }
-    input[type=range]{width:100%;}
-    button{padding:8px 16px; margin-top:12px;}
+    body { font-family:Arial, sans-serif; max-width:900px; margin:20px auto; }
+    h1,h2 { text-align:center; }
+    .plot-container { margin:30px 0; }
+    .sliders { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+    input[type=range]{ width:100%; }
+    button{padding:10px 20px; margin-top:15px;}
+    .center{text-align:center;}
   </style>
 </head>
 <body>
-<h1>Values Survey</h1>
-<p>Distribute 100 points among <b>Freedom</b>, <b>Equality</b>, and <b>Security</b> for each time period.</p>
 
-<select id="timepoint">
-  <option value="today">Today</option>
-  <option value="2075">Year 2075</option>
-</select>
+<h1>Freedom – Equality – Security Survey</h1>
+<p>Please allocate importance (summing to 100%) among <b>Freedom</b>, <b>Equality</b>, and <b>Security</b> for today and for the year 2075.</p>
 
-<label>Freedom: <span id="fVal">33</span></label>
-<input type="range" id="f" min="0" max="100" value="33">
-<label>Equality: <span id="eVal">33</span></label>
-<input type="range" id="e" min="0" max="100" value="33">
-<label>Security: <span id="sVal">34</span></label>
-<input type="range" id="s" min="0" max="100" value="34">
-<button id="submit">Submit</button>
-<p id="msg"></p>
+<div id="plot-today" class="plot-container"></div>
+<div class="sliders" id="sliders-today">
+  <label>Freedom: <span id="today-freedom-val">33</span></label>
+  <input id="today-freedom" type="range" min="0" max="100" value="33">
+  <label>Equality: <span id="today-equality-val">33</span></label>
+  <input id="today-equality" type="range" min="0" max="100" value="33">
+  <label>Security: <span id="today-security-val">34</span></label>
+  <input id="today-security" type="range" min="0" max="100" value="34">
+</div>
+
+<hr>
+
+<div id="plot-2075" class="plot-container"></div>
+<div class="sliders" id="sliders-2075">
+  <label>Freedom: <span id="f2075-val">33</span></label>
+  <input id="f2075" type="range" min="0" max="100" value="33">
+  <label>Equality: <span id="e2075-val">33</span></label>
+  <input id="e2075" type="range" min="0" max="100" value="33">
+  <label>Security: <span id="s2075-val">34</span></label>
+  <input id="s2075" type="range" min="0" max="100" value="34">
+</div>
+
+<div class="center">
+  <button id="submitBtn" disabled>Submit Responses</button>
+  <p id="status"></p>
+</div>
 
 <script>
-const url = "https://script.google.com/macros/s/AKfycbxOWFxFz8T-srTnTK6bjDw3lEIIMla323dFIsjn7YhBQONWBVuw1JCi4PW9PSED07ik/exec";
-function update(){
-  const f=+fEl.value,e=+eEl.value,s=+sEl.value,t=f+e+s||1;
-  fVal.textContent=Math.round(100*f/t);
-  eVal.textContent=Math.round(100*e/t);
-  sVal.textContent=100-(Math.round(100*f/t)+Math.round(100*e/t));
+// ---- Utility: Normalize and update values ----
+function normalizeValues(f, e, s) {
+  const t = f+e+s || 1;
+  return [f/t, e/t, s/t];
 }
-const fEl=f,eEl=e,sEl=s;
-[fEl,eEl,sEl].forEach(x=>x.oninput=update); update();
 
-submit.onclick=async ()=>{
-  const tp=timepoint.value;
-  const f=+fEl.value,e=+eEl.value,s=+sEl.value,t=f+e+s||1;
-  const body=JSON.stringify({timepoint:tp,freedom:f/t,equality:e/t,security:s/t});
-  const r=await fetch(url,{method:"POST",body});
-  msg.textContent=r.ok?"Thank you! Response recorded.":"Error submitting.";
+// ---- Initialize Plotly ternary plots ----
+function makePlot(divId, label, color) {
+  const data = [{
+    type: 'scatterternary',
+    mode: 'markers',
+    a: [0.33],
+    b: [0.33],
+    c: [0.34],
+    marker: {size: 12, color: color},
+    name: 'Selection'
+  }];
+  const layout = {
+    ternary: {
+      sum: 1,
+      aaxis: {title: 'Freedom'},
+      baxis: {title: 'Equality'},
+      caxis: {title: 'Security'}
+    },
+    title: label,
+    margin: {t:60}
+  };
+  Plotly.newPlot(divId, data, layout, {displayModeBar:false});
+}
+
+// Create both plots
+makePlot('plot-today','Values Today','#1f77b4');
+makePlot('plot-2075','Values in 2075','#d62728');
+
+// ---- Sync sliders and plot ----
+function updatePlotFromSliders(prefix, plotId) {
+  const f = +document.getElementById(prefix+'-freedom').value;
+  const e = +document.getElementById(prefix+'-equality').value;
+  const s = +document.getElementById(prefix+'-security').value;
+  const [nf, ne, ns] = normalizeValues(f, e, s);
+  document.getElementById(prefix+'-freedom-val').textContent = Math.round(nf*100);
+  document.getElementById(prefix+'-equality-val').textContent = Math.round(ne*100);
+  document.getElementById(prefix+'-security-val').textContent = Math.round(ns*100);
+  Plotly.update(plotId, {a:[nf], b:[ne], c:[ns]}, {}, [0]);
+  userInteracted[prefix] = true;
+  checkReady();
+}
+
+['today','2075'].forEach(tp=>{
+  ['freedom','equality','security'].forEach(v=>{
+    document.getElementById(tp+'-'+v).addEventListener('input',()=>updatePlotFromSliders(tp,'plot-'+tp));
+  });
+  updatePlotFromSliders(tp,'plot-'+tp);
+});
+
+// ---- Click on plot to update sliders ----
+function handleClick(event, prefix, plotId) {
+  const ternary = event.points?.[0];
+  if (!ternary) return;
+  const nf = ternary.a, ne = ternary.b, ns = ternary.c;
+  document.getElementById(prefix+'-freedom').value = Math.round(nf*100);
+  document.getElementById(prefix+'-equality').value = Math.round(ne*100);
+  document.getElementById(prefix+'-security').value = Math.round(ns*100);
+  updatePlotFromSliders(prefix, plotId);
+}
+
+document.getElementById('plot-today')
+  .on('plotly_click', ev => handleClick(ev, 'today','plot-today'));
+document.getElementById('plot-2075')
+  .on('plotly_click', ev => handleClick(ev, '2075','plot-2075'));
+
+// ---- Submission handling ----
+let userInteracted = {today:false, '2075':false};
+function checkReady() {
+  if (userInteracted.today && userInteracted['2075'])
+    document.getElementById('submitBtn').disabled = false;
+}
+
+// Example endpoint — replace with your real submission logic
+const endpoint = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+
+document.getElementById('submitBtn').onclick = async ()=>{
+  const getVals = (p)=> {
+    const f = +document.getElementById(p+'-freedom').value;
+    const e = +document.getElementById(p+'-equality').value;
+    const s = +document.getElementById(p+'-security').value;
+    const [nf,ne,ns]=normalizeValues(f,e,s);
+    return {timepoint:p, freedom:nf, equality:ne, security:ns};
+  };
+  const bodyToday = getVals('today');
+  const body2075 = getVals('2075');
+  try {
+    await fetch(endpoint,{method:'POST',body:JSON.stringify(bodyToday)});
+    await fetch(endpoint,{method:'POST',body:JSON.stringify(body2075)});
+    status.textContent="✅ Responses submitted successfully. Thank you!";
+    submitBtn.disabled=true;
+  } catch(e){
+    status.textContent="❌ Submission failed: "+e.message;
+  }
 };
 </script>
+
 </body>
 </html>
